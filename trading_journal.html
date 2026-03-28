@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trading Journal">
+<meta name="theme-color" content="#0D0F1A">
+<title>Trading Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: #0D0F1A; color: #E2E8F0; font-family: 'Sarabun', sans-serif; min-height: 100vh; overscroll-behavior: none; }
+
+  :root {
+    --green: #00D4A0; --red: #FF4757; --blue: #0F3460;
+    --bg: #0D0F1A; --card: #16213E; --border: #1E3A5F;
+    --text: #E2E8F0; --muted: #5A7A9A; --input: #0F1B2D;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0F3460 0%, #1A1A2E 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .header-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 20px; font-weight: 700; color: var(--green); }
+  .logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .tab-btns { display: flex; gap: 6px; }
+  .tab-btn {
+    padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; font-family: 'Sarabun', sans-serif;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--green); color: #0D0F1A; }
+  .tab-btn.inactive { background: var(--card); color: var(--muted); }
+
+  /* MAIN */
+  .main { max-width: 900px; margin: 0 auto; padding: 20px 12px 40px; }
+
+  /* STATS BAR */
+  .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-card { background: var(--card); border-radius: 12px; padding: 14px 16px; border: 1px solid var(--border); }
+  .stat-label { font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+  .stat-value { font-size: 18px; font-weight: 700; }
+  @media(max-width:500px) {
+    .stats-grid { grid-template-columns: repeat(2,1fr); }
+    .stat-value { font-size: 15px; }
+  }
+
+  /* CALENDAR */
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .nav-btn {
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 8px 18px; cursor: pointer; font-size: 18px; line-height: 1;
+  }
+  .month-title { font-size: 17px; font-weight: 700; color: var(--text); }
+  .day-headers { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 3px; }
+  .day-header { text-align: center; font-size: 11px; font-weight: 600; padding: 6px 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+  .cal-cell {
+    border-radius: 8px; padding: 7px 6px; min-height: 74px;
+    cursor: pointer; transition: transform 0.12s; position: relative;
+    border: 1px solid var(--border); background: var(--card);
+  }
+  .cal-cell:active { transform: scale(0.96); }
+  .cal-cell.has-trade-pos { background: rgba(0,212,160,0.12); border-color: rgba(0,212,160,0.35); }
+  .cal-cell.has-trade-neg { background: rgba(255,71,87,0.12); border-color: rgba(255,71,87,0.35); }
+  .cal-cell.is-today { border: 2px solid #4A90D9 !important; }
+  .cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+  .cell-day { font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
+  .cell-day.weekend { color: #FF6B81; }
+  .cell-day.today { color: #4A90D9; font-weight: 700; }
+  .cell-pnl { font-size: 12px; font-weight: 700; line-height: 1.2; }
+  .cell-pct { font-size: 10px; font-weight: 600; margin-top: 1px; }
+  .cell-meta { font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .cell-emoji { font-size: 10px; margin-top: 2px; }
+  .cell-plus { font-size: 16px; color: #1E3A5F; text-align: center; margin-top: 18px; }
+
+  /* SUMMARY TABLE */
+  .summary-title { font-size: 15px; font-weight: 700; color: var(--green); margin-bottom: 14px; }
+  .summary-wrap { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 420px; }
+  thead tr { background: var(--blue); }
+  th { padding: 11px 14px; font-size: 11px; color: var(--muted); font-weight: 600; text-align: center; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; font-size: 12px; text-align: center; border-bottom: 1px solid var(--border); }
+  tbody tr { background: var(--card); cursor: pointer; transition: background 0.15s; }
+  tbody tr:nth-child(even) { background: #111827; }
+  tbody tr:hover { background: #1E3A5F; }
+
+  /* MODAL */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.78);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+    padding: 24px; width: 100%; max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.65);
+    transform: translateY(20px); transition: transform 0.2s;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-size: 15px; font-weight: 700; color: var(--green); margin-bottom: 18px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .form-field label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+  .form-field input {
+    width: 100%; background: var(--input); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; color: var(--text);
+    font-size: 14px; font-family: 'Sarabun', sans-serif; outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-field input:focus { border-color: var(--green); }
+  .pnl-preview {
+    background: var(--input); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .pnl-preview-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+  .pnl-preview-val { font-size: 17px; font-weight: 700; }
+  .emotion-section { margin-bottom: 12px; }
+  .emotion-label { font-size: 10px; color: var(--muted); margin-bottom: 7px; }
+  .emotion-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emotion-chip {
+    padding: 5px 11px; border-radius: 20px; border: 1px solid var(--border);
+    cursor: pointer; font-size: 11px; background: var(--input); color: var(--muted);
+    font-family: 'Sarabun', sans-serif; transition: all 0.15s;
+  }
+  .emotion-chip.selected { background: var(--blue); color: var(--green); border-color: var(--green); }
+  .note-section { margin-bottom: 18px; }
+  .note-section label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+  .note-section textarea {
+    width: 100%; background: var(--input); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; color: var(--text);
+    font-size: 12px; font-family: 'Sarabun', sans-serif; outline: none;
+    resize: none; transition: border-color 0.15s;
+  }
+  .note-section textarea:focus { border-color: var(--green); }
+  .modal-btns { display: flex; gap: 8px; }
+  .btn-save {
+    flex: 1; background: var(--green); color: #0D0F1A;
+    border: none; border-radius: 10px; padding: 12px;
+    font-size: 14px; font-weight: 700; font-family: 'Sarabun', sans-serif; cursor: pointer;
+  }
+  .btn-delete {
+    background: var(--red); color: #fff; border: none;
+    border-radius: 10px; padding: 12px 16px; font-size: 13px; cursor: pointer;
+  }
+  .btn-cancel {
+    background: #1E3A5F; color: var(--muted); border: none;
+    border-radius: 10px; padding: 12px 16px; font-size: 13px; cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <div class="logo">📊 Trading Journal</div>
+      <div class="logo-sub">บันทึกการเทรดประจำวัน</div>
+    </div>
+    <div class="tab-btns">
+      <button class="tab-btn active" id="btn-calendar" onclick="switchTab('calendar')">📅 ปฏิทิน</button>
+      <button class="tab-btn inactive" id="btn-summary" onclick="switchTab('summary')">📈 สรุป</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Stats -->
+  <div class="stats-grid" id="stats-bar"></div>
+
+  <!-- Calendar Tab -->
+  <div id="tab-calendar">
+    <div class="month-nav">
+      <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+      <div class="month-title" id="month-title"></div>
+      <button class="nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="day-headers" id="day-headers"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- Summary Tab -->
+  <div id="tab-summary" style="display:none">
+    <div class="summary-title" id="summary-title"></div>
+    <div class="summary-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>เดือน</th><th>กำไร/ขาดทุน</th><th>PnL%</th>
+            <th>วันเทรด</th><th>ครั้ง</th><th>Win Rate</th>
+          </tr>
+        </thead>
+        <tbody id="summary-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>กำไร/ขาดทุน (฿)</label>
+        <input type="number" id="f-pnl" placeholder="ลบ = ขาดทุน" oninput="updatePreview()">
+      </div>
+      <div class="form-field">
+        <label>Margin / ต้นทุน (฿)</label>
+        <input type="number" id="f-margin" placeholder="เงินที่ใช้เทรดวันนี้" oninput="updatePreview()">
+      </div>
+      <div class="form-field">
+        <label>จำนวนครั้งที่เทรด</label>
+        <input type="number" id="f-trades" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label>Win (ครั้ง)</label>
+        <input type="number" id="f-wins" placeholder="0">
+      </div>
+      <div class="form-field">
+        <label>Loss (ครั้ง)</label>
+        <input type="number" id="f-losses" placeholder="0">
+      </div>
+      <div class="pnl-preview">
+        <div class="pnl-preview-label">PnL% (อัตโนมัติ)</div>
+        <div class="pnl-preview-val" id="pnl-preview-val" style="color:var(--muted); font-size:13px">กรอก Margin ก่อน</div>
+      </div>
+    </div>
+
+    <div class="emotion-section">
+      <div class="emotion-label">อารมณ์/ความรู้สึก</div>
+      <div class="emotion-chips" id="emotion-chips"></div>
+    </div>
+
+    <div class="note-section">
+      <label>บันทึก / ความคิด</label>
+      <textarea id="f-note" rows="3" placeholder="จดบันทึกความคิด กลยุทธ์ หรือบทเรียนจากวันนี้..."></textarea>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-save" onclick="saveTrade()">💾 บันทึก</button>
+      <button class="btn-delete" id="btn-delete" style="display:none" onclick="deleteTrade()">🗑</button>
+      <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const DAYS = ["อา","จ","อ","พ","พฤ","ศ","ส"];
+const EMOTIONS = ["😊 สงบ","🔥 มั่นใจ","😰 กังวล","😤 หงุดหงิด","😴 เหนื่อย","😐 เฉยๆ"];
+
+const now = new Date();
+let viewYear = now.getFullYear();
+let viewMonth = now.getMonth() + 1;
+let selectedDay = null;
+let selectedEmotion = EMOTIONS[0];
+let currentTab = 'calendar';
+
+// Load from localStorage or use sample data
+let trades = JSON.parse(localStorage.getItem('tj_trades') || 'null') || {
+  [`${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()-2}`]: { pnl: 24900, margin: 500000, trades: 5, wins: 4, losses: 1, emotion: "🔥 มั่นใจ", note: "เทรดตามแผน momentum ชัดเจน" },
+  [`${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()-1}`]: { pnl: -31774, margin: 400000, trades: 7, wins: 2, losses: 5, emotion: "😰 กังวล", note: "over-trade ไม่ตัดขาดทุนตามแผน" },
+  [`${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`]: { pnl: 124684, margin: 600000, trades: 4, wins: 4, losses: 0, emotion: "🔥 มั่นใจ", note: "เข้าถูกจุด ถือตามแผนได้ดีมาก" },
+};
+
+function save() { localStorage.setItem('tj_trades', JSON.stringify(trades)); }
+function key(y,m,d) { return `${y}-${m}-${d}`; }
+function fmtNum(n) { return Math.abs(n).toLocaleString('th-TH'); }
+function fmtPnL(n) { if(n===0) return '-'; return (n>0?'+':'-') + fmtNum(n); }
+function fmtPct(pnl, margin) {
+  if (!margin || margin === 0) return null;
+  const p = (pnl / margin * 100);
+  return (p>=0?'+':'') + p.toFixed(2) + '%';
+}
+
+function getMonthData(y, m) {
+  return Object.entries(trades)
+    .filter(([k]) => k.startsWith(`${y}-${m}-`))
+    .map(([,v]) => v);
+}
+
+function renderStats() {
+  const data = getMonthData(viewYear, viewMonth);
+  const totalPnL = data.reduce((s,d) => s+d.pnl, 0);
+  const totalMargin = data.reduce((s,d) => s+(d.margin||0), 0);
+  const totalTrades = data.reduce((s,d) => s+d.trades, 0);
+  const totalWins = data.reduce((s,d) => s+d.wins, 0);
+  const winRate = totalTrades > 0 ? ((totalWins/totalTrades)*100).toFixed(1) : '0.0';
+  const avgPct = totalMargin > 0 ? fmtPct(totalPnL, totalMargin) : null;
+
+  const stats = [
+    { label: 'กำไร/ขาดทุนเดือนนี้', value: fmtPnL(totalPnL), color: totalPnL >= 0 ? '#00D4A0' : '#FF4757' },
+    { label: 'PnL% รวม', value: avgPct || '-', color: totalPnL >= 0 ? '#00D4A0' : '#FF4757' },
+    { label: 'จำนวนครั้งทั้งหมด', value: `${totalTrades} ครั้ง`, color: '#F6AD55' },
+    { label: 'Win Rate', value: `${winRate}%`, color: parseFloat(winRate) >= 50 ? '#00D4A0' : '#FF4757' },
+  ];
+  document.getElementById('stats-bar').innerHTML = stats.map(s =>
+    `<div class="stat-card">
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-value" style="color:${s.color}">${s.value}</div>
+    </div>`
+  ).join('');
+}
+
+function renderCalendar() {
+  document.getElementById('month-title').textContent = `${MONTHS[viewMonth-1]} ${viewYear}`;
+  const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+  const firstDay = new Date(viewYear, viewMonth-1, 1).getDay();
+
+  document.getElementById('day-headers').innerHTML = DAYS.map((d,i) =>
+    `<div class="day-header" style="color:${i===0||i===6?'#FF6B81':'#5A7A9A'}">${d}</div>`
+  ).join('');
+
+  let cells = '';
+  for (let i=0; i<firstDay; i++) cells += '<div class="cal-cell empty"></div>';
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const k = key(viewYear, viewMonth, d);
+    const t = trades[k];
+    const isToday = now.getFullYear()===viewYear && now.getMonth()+1===viewMonth && now.getDate()===d;
+    const dow = (firstDay + d - 1) % 7;
+    const isWeekend = dow===0 || dow===6;
+    let cls = 'cal-cell';
+    if (t) cls += t.pnl >= 0 ? ' has-trade-pos' : ' has-trade-neg';
+    if (isToday) cls += ' is-today';
+
+    const dayCls = 'cell-day' + (isToday?' today':isWeekend?' weekend':'');
+    let inner = `<div class="${dayCls}">${d}</div>`;
+
+    if (t) {
+      const pct = t.margin > 0 ? fmtPct(t.pnl, t.margin) : null;
+      const pnlColor = t.pnl >= 0 ? '#00D4A0' : '#FF4757';
+      const pctColor = t.pnl >= 0 ? '#00A880' : '#CC2233';
+      inner += `<div class="cell-pnl" style="color:${pnlColor}">${t.pnl>=0?'+':''}${fmtNum(t.pnl)}</div>`;
+      if (pct) inner += `<div class="cell-pct" style="color:${pctColor}">${pct}</div>`;
+      inner += `<div class="cell-meta">${t.trades}ครั้ง ${t.wins}W/${t.losses}L</div>`;
+      inner += `<div class="cell-emoji">${t.emotion.split(' ')[0]}</div>`;
+    } else {
+      inner += `<div class="cell-plus">+</div>`;
+    }
+
+    cells += `<div class="${cls}" onclick="openModal(${d})">${inner}</div>`;
+  }
+  document.getElementById('cal-grid').innerHTML = cells;
+}
+
+function renderSummary() {
+  document.getElementById('summary-title').textContent = `สรุปรายเดือน ${viewYear}`;
+  let rows = '';
+  MONTHS.forEach((m, mi) => {
+    const data = getMonthData(viewYear, mi+1);
+    const pnl = data.reduce((s,d) => s+d.pnl, 0);
+    const margin = data.reduce((s,d) => s+(d.margin||0), 0);
+    const tr = data.reduce((s,d) => s+d.trades, 0);
+    const wins = data.reduce((s,d) => s+d.wins, 0);
+    const days = data.length;
+    const winRate = tr > 0 ? ((wins/tr)*100).toFixed(1)+'%' : '-';
+    const pct = margin > 0 ? fmtPct(pnl, margin) : '-';
+    const pnlColor = pnl > 0 ? '#00D4A0' : pnl < 0 ? '#FF4757' : '#5A7A9A';
+    const pctColor = pnl > 0 ? '#00D4A0' : pnl < 0 ? '#FF4757' : '#5A7A9A';
+    const wrColor = tr > 0 ? (wins/tr >= 0.5 ? '#00D4A0' : '#FF4757') : '#5A7A9A';
+    rows += `<tr onclick="jumpMonth(${mi+1})">
+      <td style="color:#E2E8F0;font-weight:600">${m}</td>
+      <td style="color:${pnlColor};font-weight:700">${pnl!==0?(pnl>0?'+':'')+pnl.toLocaleString('th-TH'):'-'}</td>
+      <td style="color:${pctColor};font-weight:600">${pct}</td>
+      <td style="color:#8892A4">${days||'-'}</td>
+      <td style="color:#8892A4">${tr||'-'}</td>
+      <td style="color:${wrColor};font-weight:600">${winRate}</td>
+    </tr>`;
+  });
+  document.getElementById('summary-body').innerHTML = rows;
+}
+
+function jumpMonth(m) {
+  viewMonth = m;
+  switchTab('calendar');
+}
+
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+  if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+  renderAll();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-calendar').style.display = tab==='calendar'?'block':'none';
+  document.getElementById('tab-summary').style.display = tab==='summary'?'block':'none';
+  document.getElementById('btn-calendar').className = 'tab-btn ' + (tab==='calendar'?'active':'inactive');
+  document.getElementById('btn-summary').className = 'tab-btn ' + (tab==='summary'?'active':'inactive');
+  renderAll();
+}
+
+function renderAll() {
+  renderStats();
+  renderCalendar();
+  renderSummary();
+}
+
+// Modal
+function openModal(day) {
+  selectedDay = day;
+  const k = key(viewYear, viewMonth, day);
+  const t = trades[k];
+  document.getElementById('modal-title').textContent = `📝 บันทึก — ${day} ${MONTHS[viewMonth-1]} ${viewYear}`;
+  document.getElementById('f-pnl').value = t ? t.pnl : '';
+  document.getElementById('f-margin').value = t ? (t.margin||'') : '';
+  document.getElementById('f-trades').value = t ? t.trades : '';
+  document.getElementById('f-wins').value = t ? t.wins : '';
+  document.getElementById('f-losses').value = t ? t.losses : '';
+  document.getElementById('f-note').value = t ? t.note : '';
+  selectedEmotion = t ? t.emotion : EMOTIONS[0];
+  document.getElementById('btn-delete').style.display = t ? 'block' : 'none';
+  renderEmotionChips();
+  updatePreview();
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function closeModalOutside(e) { if(e.target===document.getElementById('overlay')) closeModal(); }
+
+function renderEmotionChips() {
+  document.getElementById('emotion-chips').innerHTML = EMOTIONS.map(em =>
+    `<button class="emotion-chip ${em===selectedEmotion?'selected':''}" onclick="selectEmotion('${em}')">${em}</button>`
+  ).join('');
+}
+
+function selectEmotion(em) {
+  selectedEmotion = em;
+  renderEmotionChips();
+}
+
+function updatePreview() {
+  const pnl = parseFloat(document.getElementById('f-pnl').value);
+  const margin = parseFloat(document.getElementById('f-margin').value);
+  const el = document.getElementById('pnl-preview-val');
+  if (!isNaN(pnl) && !isNaN(margin) && margin > 0) {
+    const pct = (pnl / margin * 100);
+    el.textContent = (pct>=0?'+':'') + pct.toFixed(2) + '%';
+    el.style.color = pct >= 0 ? '#00D4A0' : '#FF4757';
+    el.style.fontSize = '17px';
+  } else {
+    el.textContent = 'กรอก Margin ก่อน';
+    el.style.color = 'var(--muted)';
+    el.style.fontSize = '13px';
+  }
+}
+
+function saveTrade() {
+  const k = key(viewYear, viewMonth, selectedDay);
+  trades[k] = {
+    pnl: parseFloat(document.getElementById('f-pnl').value) || 0,
+    margin: parseFloat(document.getElementById('f-margin').value) || 0,
+    trades: parseInt(document.getElementById('f-trades').value) || 0,
+    wins: parseInt(document.getElementById('f-wins').value) || 0,
+    losses: parseInt(document.getElementById('f-losses').value) || 0,
+    emotion: selectedEmotion,
+    note: document.getElementById('f-note').value,
+  };
+  save();
+  closeModal();
+  renderAll();
+}
+
+function deleteTrade() {
+  const k = key(viewYear, viewMonth, selectedDay);
+  delete trades[k];
+  save();
+  closeModal();
+  renderAll();
+}
+
+renderAll();
+</script>
+</body>
+</html>
